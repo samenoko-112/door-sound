@@ -26,7 +26,8 @@ if TEST_MODE:
     )
 
 # --- サウンド関連の設定 ---
-SOUNDS_DIR = "./sounds"  # サウンドファイルが格納されているディレクトリ
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SOUNDS_DIR = os.path.join(SCRIPT_DIR, "sounds")  # 絶対パスで指定
 ALLOWED_EXTENSIONS = [".wav", ".mp3"] # 再生を許可する拡張子
 
 # --- GPIO関連の設定 ---
