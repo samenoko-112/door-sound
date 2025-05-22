@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+ドアの開閉を検知して音声を再生するプログラム
+- GPIOピンでドアセンサーの状態を監視
+- ドアが開いたときにランダムな音声を再生
+- テストモード時はログを記録
+"""
+
 import RPi.GPIO as GPIO
 import pygame
 import os
@@ -8,17 +18,21 @@ import sys
 import logging
 from datetime import datetime
 
-# --- スクリプトの基本設定 ---
+# ===== 基本設定 =====
+# スクリプトの絶対パスを取得
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# --- テストモード設定 ---
+# ===== テストモード設定 =====
 TEST_MODE = True  # テストモードのフラグ
 
-# --- ログ設定 ---
+# ===== ログ設定 =====
 if TEST_MODE:
+    # ログディレクトリの作成と設定
     log_dir = os.path.join(SCRIPT_DIR, "logs")
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, f"door_sound_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+    
+    # ログの基本設定
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
@@ -28,31 +42,35 @@ if TEST_MODE:
         ]
     )
 
-# --- サウンド関連の設定 ---
-SOUNDS_DIR = os.path.join(SCRIPT_DIR, "sounds")  # 絶対パスで指定
-ALLOWED_EXTENSIONS = [".wav", ".mp3"] # 再生を許可する拡張子
+# ===== サウンド設定 =====
+SOUNDS_DIR = os.path.join(SCRIPT_DIR, "sounds")  # サウンドファイルのディレクトリ
+ALLOWED_EXTENSIONS = [".wav", ".mp3"]  # 再生可能な音声ファイルの拡張子
 
-# --- GPIO関連の設定 ---
+# ===== GPIO設定 =====
 # GPIOピンの番号付け方式をBCM (Broadcom SOC channel) に設定
 GPIO.setmode(GPIO.BCM)
 
 # ドアセンサーを接続するGPIOピン番号
-# BCMモードのGPIO 3番ピン (物理ピン番号では5番ピン) を使用
+# BCMモードのGPIO 11番ピンを使用
 DOOR_SENSOR_PIN = 11
 
-# GPIOピンを入力モードに設定し、内部プルアップ抵抗を有効にする
-# これにより、スイッチOFF(ドア開)でHIGH、ON(ドア閉)でLOWになる想定
+# GPIOピンを入力モードに設定し、内部プルアップ抵抗を有効化
+# スイッチOFF(ドア開)でHIGH、ON(ドア閉)でLOWになる想定
 GPIO.setup(DOOR_SENSOR_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-# --- デバウンス処理のための設定 ---
-# チャタリング（短時間のON/OFFの繰り返し）を無視する時間（秒単位）。
-# この時間内に状態が再度変化しても、安定するまでは最終的な状態変化として認識しない。
-# 0.1秒でチャタリングが収まらない場合は、0.3秒や0.5秒など、長めの値に調整してください。
+# ===== デバウンス設定 =====
+# チャタリング（短時間のON/OFFの繰り返し）を無視する時間（秒）
+# この時間内の状態変化は無視され、安定するまで待機
 DEBOUNCE_TIME_S = 0.2
 
-# --- サウンド再生のための関数 ---
+# ===== サウンド再生関数 =====
 def get_random_sound_file():
-    """指定されたディレクトリからランダムなサウンドファイルパスを取得する"""
+    """
+    指定されたディレクトリからランダムなサウンドファイルパスを取得する
+    
+    Returns:
+        str or None: サウンドファイルのパス。ファイルが見つからない場合はNone
+    """
     sound_files = []
     try:
         for filename in os.listdir(SOUNDS_DIR):
@@ -84,7 +102,12 @@ def get_random_sound_file():
     return selected_file
 
 def play_sound(file_path):
-    """指定されたファイルパスのサウンドを再生する"""
+    """
+    指定されたファイルパスのサウンドを再生する
+    
+    Args:
+        file_path (str): 再生するサウンドファイルのパス
+    """
     if file_path:
         try:
             pygame.mixer.music.load(file_path)
@@ -99,9 +122,15 @@ def play_sound(file_path):
                 logging.error(error_msg)
             print(error_msg)
 
-# --- シグナルハンドラの設定 ---
+# ===== シグナルハンドラ =====
 def signal_handler(signum, frame):
-    """シグナルを受け取ったときの処理"""
+    """
+    シグナルを受け取ったときの処理
+    
+    Args:
+        signum: 受信したシグナル番号
+        frame: 現在のスタックフレーム
+    """
     log_msg = f"\nシグナル {signum} を受信しました。終了処理を開始します..."
     if TEST_MODE:
         logging.info(log_msg)
@@ -120,7 +149,7 @@ def signal_handler(signum, frame):
 signal.signal(signal.SIGTERM, signal_handler)
 signal.signal(signal.SIGINT, signal_handler)
 
-# --- メイン処理 ---
+# ===== メイン処理 =====
 if __name__ == "__main__":
     if TEST_MODE:
         logging.info("=== ドアサウンドプログラム開始 ===")
@@ -143,16 +172,16 @@ if __name__ == "__main__":
         logging.info(log_msg)
     print(log_msg)
 
-    # --- 状態を管理するための変数 (デバウンス用) ---
+    # 状態を管理するための変数 (デバウンス用)
     previous_raw_reading = GPIO.input(DOOR_SENSOR_PIN)
     last_stable_state = previous_raw_reading
     time_of_last_raw_change = time.time()
 
-    # --- プログラム開始時のセンサー状態を表示 ---
+    # プログラム開始時のセンサー状態を表示
     current_time_str = time.strftime('%H:%M:%S')
-    if last_stable_state == GPIO.LOW: # ドアが閉じている
+    if last_stable_state == GPIO.LOW:  # ドアが閉じている
         log_msg = f"[{current_time_str}] ドアが閉まりました (初期状態)"
-    else: # ドアが開いている
+    else:  # ドアが開いている
         log_msg = f"[{current_time_str}] ドアが開きました (初期状態)"
     
     if TEST_MODE:
@@ -172,23 +201,22 @@ if __name__ == "__main__":
                     last_stable_state = current_raw_reading
                     current_time_str = time.strftime('%H:%M:%S')
 
-                    if last_stable_state == GPIO.HIGH: # ドアが開いたと判定
+                    if last_stable_state == GPIO.HIGH:  # ドアが開いたと判定
                         log_msg = f"[{current_time_str}] ドアが開きました"
                         if TEST_MODE:
                             logging.info(log_msg)
                         print(log_msg)
-                        # --- サウンド再生処理 ---
+                        # サウンド再生処理
                         sound_file_to_play = get_random_sound_file()
                         play_sound(sound_file_to_play)
-                        # -----------------------
-                    else: # ドアが閉じたと判定 (last_stable_state == GPIO.LOW)
+                    else:  # ドアが閉じたと判定
                         log_msg = f"[{current_time_str}] ドアが閉まりました"
                         if TEST_MODE:
                             logging.info(log_msg)
                         print(log_msg)
             
             previous_raw_reading = current_raw_reading
-            time.sleep(0.02) # ポーリング間隔 (20ミリ秒)
+            time.sleep(0.02)  # ポーリング間隔 (20ミリ秒)
 
     except Exception as e:
         error_msg = f"\n予期せぬエラーが発生しました: {e}"
@@ -201,9 +229,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     finally:
-        # プログラム終了時にGPIO設定をクリーンアップ
+        # プログラム終了時のクリーンアップ
         GPIO.cleanup()
-        # Pygame Mixerを終了
         pygame.mixer.quit()
         log_msg = "リソースを解放しました。"
         if TEST_MODE:
