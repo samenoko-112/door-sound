@@ -25,6 +25,6 @@ fi
 source "$ACTIVATE_SCRIPT"
 
 # Pythonスクリプトを実行
-python "$PYTHON_SCRIPT_PATH"
+python3 "$PYTHON_SCRIPT_PATH"
 
 exit 0
