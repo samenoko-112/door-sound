@@ -1,0 +1,10 @@
+[Unit]
+Description=DoorSound
+
+[Service]
+Type=simple
+ExecStart=/bin/bash %h/door-sound/start.sh
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
