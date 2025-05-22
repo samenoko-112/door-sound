@@ -8,12 +8,15 @@ import sys
 import logging
 from datetime import datetime
 
+# --- スクリプトの基本設定 ---
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # --- テストモード設定 ---
 TEST_MODE = True  # テストモードのフラグ
 
 # --- ログ設定 ---
 if TEST_MODE:
-    log_dir = "./logs"
+    log_dir = os.path.join(SCRIPT_DIR, "logs")
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, f"door_sound_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
     logging.basicConfig(
@@ -26,7 +29,6 @@ if TEST_MODE:
     )
 
 # --- サウンド関連の設定 ---
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SOUNDS_DIR = os.path.join(SCRIPT_DIR, "sounds")  # 絶対パスで指定
 ALLOWED_EXTENSIONS = [".wav", ".mp3"] # 再生を許可する拡張子
 
